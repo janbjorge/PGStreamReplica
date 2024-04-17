@@ -1,7 +1,34 @@
+from __future__ import annotations
 import socket
 import struct
+import re
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Generator
+
+
+@dataclass
+class TableOperation:
+    schema: str
+    table: str
+    operation: str
+    when: datetime
+
+    @staticmethod
+    def from_x_log_data(
+        obj: XLogData,
+        pattern=re.compile(rb"table (\w+)\.(\w+): (\w+):"),
+        dt_base=datetime(year=2000, month=1, day=1, tzinfo=timezone.utc),
+    ) -> TableOperation | None:
+        if match := pattern.search(obj.data):
+            schema, table, operation = match.groups()
+            return TableOperation(
+                schema=schema.decode(),
+                table=table.decode(),
+                operation=operation.decode(),
+                when=dt_base + timedelta(microseconds=obj.clock),
+            )
+        return None
 
 
 @dataclass
@@ -14,7 +41,7 @@ class XLogData:
     data: bytes
 
     @staticmethod
-    def from_bytes(raw: bytes) -> "XLogData":
+    def from_bytes(raw: bytes) -> XLogData:
         cqqq_len = 1 + 3 * 8
         type, start, stop, clock = struct.unpack("!cqqq", raw[:cqqq_len])
         return XLogData(
@@ -35,7 +62,7 @@ class XPrimaryKeepaliveMessage:
     high_urgency: int
 
     @staticmethod
-    def from_bytes(raw: bytes) -> "XPrimaryKeepaliveMessage":
+    def from_bytes(raw: bytes) -> XPrimaryKeepaliveMessage:
         type, wal_end, clock, high_urgency = struct.unpack("!cqqb", raw)
         return XPrimaryKeepaliveMessage(
             type=type,
@@ -51,7 +78,7 @@ class Header:
     length: int
 
     @staticmethod
-    def from_bytes(raw: bytes) -> "Header":
+    def from_bytes(raw: bytes) -> Header:
         type, length = struct.unpack("!cI", raw)
         return Header(
             type=type.decode(),
@@ -66,7 +93,7 @@ class ParameterStatus:
     value: str
 
     @staticmethod
-    def from_bytes(raw: bytes) -> "ParameterStatus":
+    def from_bytes(raw: bytes) -> ParameterStatus:
         # Skip header first 5, ignore null termination.
         name, value = raw[:-1].split(b"\x00", maxsplit=2)
         return ParameterStatus(
@@ -82,7 +109,7 @@ class ErrorResponse:
     message: str
 
     @staticmethod
-    def from_bytes(raw: bytes) -> "ErrorResponse":
+    def from_bytes(raw: bytes) -> ErrorResponse:
         # Looks flaky, works for now.
         lookup = {x[:1]: x[1:] for x in raw.split(b"\x00")}
         return ErrorResponse(
@@ -96,7 +123,7 @@ class CopyData:
     data: bytes
 
     @staticmethod
-    def from_bytes(raw: bytes) -> "CopyData":
+    def from_bytes(raw: bytes) -> CopyData:
         return CopyData(data=raw)
 
     def parse(self) -> XLogData | XPrimaryKeepaliveMessage:
@@ -224,7 +251,12 @@ def listen(s: socket.socket, buffsize: int = 4096) -> None:
         if recved := s.recv(buffsize):
             for x in (x for x in parse(recved) if isinstance(x, CopyData)):
                 event = x.parse()
-                print(event)
+                # print(event)
+
+                if isinstance(event, XLogData) and (
+                    to := TableOperation.from_x_log_data(event)
+                ):
+                    print(to)
 
                 # Only need to keep the connection up.
                 if isinstance(event, XPrimaryKeepaliveMessage):
