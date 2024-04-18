@@ -21,7 +21,7 @@ The below output is given as a result of updating the sysconf table (in a second
 
 ```bash
 PGStreamReplica git:(main) ✗ python3 client.py
-<socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 59319), raddr=('127.0.0.1', 5432)>
+<socket.socket fd=3, family=2, type=1, proto=0, laddr=('127.0.0.1', 64386), raddr=('127.0.0.1', 5432)>
 ParameterStatus(name='in_hot_standby', value='off')
 ParameterStatus(name='integer_datetimes', value='on')
 ParameterStatus(name='TimeZone', value='Etc/UTC')
@@ -36,20 +36,8 @@ ParameterStatus(name='session_authorization', value='testuser')
 ParameterStatus(name='client_encoding', value='UTF8')
 ParameterStatus(name='server_version', value='16.2 (Debian 16.2-1.pgdg120+2)')
 ParameterStatus(name='server_encoding', value='UTF8')
-XPrimaryKeepaliveMessage(type=b'k', wal_end=30669832, clock=766441270414640, high_urgency=0)
-XLogData(type='w', start=30669952, stop=30669952, clock=766441270418457, data=b'BEGIN 735')
-XLogData(type='w', start=30669952, stop=30669952, clock=766441270418786, data=b"table public.sysconf: UPDATE: key[character varying]:'updated_at' value[text]:'2024-04-14T22:20:49+02:00'")
-XLogData(type='w', start=30670432, stop=30670432, clock=766441270418806, data=b'COMMIT 735')
-XPrimaryKeepaliveMessage(type=b'k', wal_end=30949240, clock=766441270421737, high_urgency=0)
-XLogData(type='w', start=30949240, stop=30949240, clock=766441272871213, data=b'BEGIN 747')
-XLogData(type='w', start=30949240, stop=30949240, clock=766441272871262, data=b"table public.sysconf: UPDATE: key[character varying]:'updated_at' value[text]:'2024-04-14T22:21:12+02:00'")
-XLogData(type='w', start=30949416, stop=30949416, clock=766441272871279, data=b'COMMIT 747')
-XPrimaryKeepaliveMessage(type=b'k', wal_end=30949416, clock=766441272871299, high_urgency=0)
-XLogData(type='w', start=30949416, stop=30949416, clock=766441273593453, data=b'BEGIN 748')
-XLogData(type='w', start=30949416, stop=30949416, clock=766441273593514, data=b"table public.sysconf: UPDATE: key[character varying]:'updated_at' value[text]:'2024-04-14T22:21:13+02:00'")
-XLogData(type='w', start=30949568, stop=30949568, clock=766441273593527, data=b'COMMIT 748')
-XPrimaryKeepaliveMessage(type=b'k', wal_end=30949568, clock=766441273593549, high_urgency=0)
-XPrimaryKeepaliveMessage(type=b'k', wal_end=30949624, clock=766441280108936, high_urgency=0)
+TableOperation(schema='public', table='sysconf', operation='UPDATE', when=datetime.datetime(2024, 4, 17, 20, 6, 38, 758228, tzinfo=datetime.timezone.utc))
+TableOperation(schema='public', table='sysconf', operation='UPDATE', when=datetime.datetime(2024, 4, 17, 20, 6, 39, 735584, tzinfo=datetime.timezone.utc))
 ```
 
 ## Contributing

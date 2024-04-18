@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Generator
 
+import asyncpg
+
 
 @dataclass
 class TableOperation:
