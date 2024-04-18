@@ -1,12 +1,10 @@
 from __future__ import annotations
-import socket
+import asyncio
 import struct
 import re
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Generator
-
-import asyncpg
 
 
 @dataclass
@@ -235,25 +233,28 @@ def query(string: str) -> bytes:
     )
 
 
-def listen(s: socket.socket, buffsize: int = 4096) -> None:
+async def listen(
+    reader: asyncio.StreamReader,
+    writer: asyncio.StreamWriter,
+    buffsize: int = 4096,
+) -> None:
     # Register
-    s.sendall(create_startup_packet())
-    recved = s.recv(buffsize)
-    for x in parse(recved):
+    writer.write(create_startup_packet())
+    await writer.drain()
+    for x in parse(await reader.read(buffsize)):
         print(x)
 
     # Start logical on slot 'test', created in `init_db.sh`.
     start_replication_command = query("START_REPLICATION SLOT test LOGICAL 0/0")
-    s.sendall(start_replication_command)
-    recved = s.recv(buffsize)
-    for x in parse(recved):
+    writer.write(start_replication_command)
+    await writer.drain()
+    for x in parse(await reader.read(buffsize)):
         print(x)
 
     while True:
-        if recved := s.recv(buffsize):
+        if recved := (await reader.read(buffsize)):
             for x in (x for x in parse(recved) if isinstance(x, CopyData)):
                 event = x.parse()
-                # print(event)
 
                 if isinstance(event, XLogData) and (
                     to := TableOperation.from_x_log_data(event)
@@ -262,7 +263,7 @@ def listen(s: socket.socket, buffsize: int = 4096) -> None:
 
                 # Only need to keep the connection up.
                 if isinstance(event, XPrimaryKeepaliveMessage):
-                    s.sendall(
+                    writer.write(
                         create_copy_data(
                             create_standby_status_update(
                                 event.wal_end,
@@ -272,18 +273,16 @@ def listen(s: socket.socket, buffsize: int = 4096) -> None:
                             )
                         )
                     )
+                    await writer.drain()
 
 
-def main(addr: str = "127.0.0.1", port: int = 5432) -> None:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((addr, port))
-    print(s)
-
+async def main(addr: str = "127.0.0.1", port: int = 5432) -> None:
+    reader, writer = await asyncio.open_connection(addr, port)
     try:
-        listen(s)
+        await listen(reader, writer)
     finally:
-        s.close()
+        await writer.wait_closed()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
